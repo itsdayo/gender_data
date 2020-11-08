@@ -10,6 +10,7 @@ import jpyhelper as jpyh
 
 
 def genderize(args):
+    print(args)
 
     # File initialization
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -57,43 +58,42 @@ def genderize(args):
         key_present = False
 
     # Open ifile
-
     with open(ifile, 'r', encoding="utf8") as csvfile:
         readCSV = csv.reader(csvfile, delimiter=',', skipinitialspace=True)
-        reader = (readCSV)
 
-        i = next(readCSV)
+        i = next(readCSV)  # set i to the headers as an array
+        first_name = []
+        allData = []
 
-        if args.auto == False:
+        if args.auto == False:  # add columns based off auto
             i.append('male')
             i.append('female')
         if args.auto == True:
             i.append('gender')
             i.append('probability')
             i.append('count')
-        first_name = []
-        allData = []
-        headers = i
 
         for row in readCSV:  # Read CSV into first_name list
             allData.append(row)
-
-            first_name.append(row[0])  # specifiy the name column index here
+            first_name.append(row[1])  # specify the name column index here
 
         if args.noheader == False:
             first_name.pop(0)  # Remove header
 
         o_first_name = list()
 
-        for l in first_name:
-
-            o_first_name.append(l)
+        # Deleted this part of the code because it substrings the name column
+        # for l in first_name:
+        #     for b in l:
+        #         o_first_name.append(b)
+        # print(o_first_name)
 
         if args.auto == True:
-            uniq_first_name = list(set(o_first_name))
+
             chunks = list(jpyh.splitlist(first_name, 10))
+
             print("--- Read CSV with " + str(len(first_name)) +
-                  " first_name. " + str(len(uniq_first_name)) + " unique.")
+                  " first_name. " + str(len(first_name)) + " unique.")
         else:
             chunks = list(jpyh.splitlist(first_name, 10))
             print("--- Read CSV with " + str(len(first_name)) + " first_name")
@@ -112,108 +112,12 @@ def genderize(args):
 
         if args.auto == True:
             ofile = ofile + ".tmp"
-        # if args.auto == True:
-        #     ofile = ofile
-        if args.auto == False:
-            response_time = []
-            gender_responses = list()
-            with open(ofile, 'w', newline='', encoding="utf8") as f:
-                writer1 = csv.writer(f)
-                writer1.writerow(
-                    i)
-                chunks_len = len(chunks)
-                stopped = False
-                for index, chunk in enumerate(chunks):
-                    if stopped:
-                        break
-                    success = False
-                    while not success:
-                        try:
-                            start = time.time()
 
-                            if key_present:
-                                dataset = genderize.get(chunk)
-
-                            else:
-                                dataset = Genderize().get(chunk)
-
-                            gender_responses.append(dataset)
-                            success = True
-                        except GenderizeException as e:
-                            # print("\n" + str(e))
-                            logger.error(e)
-
-                            # Error handling
-                            if "response not in JSON format" in str(e) and args.catch == True:
-                                if jpyh.query_yes_no("\n---!! 502 detected, try again?") == True:
-                                    success = False
-                                    continue
-                            elif "Invalid API key" in str(e) and args.catch == True:
-                                print(
-                                    "\n---!! Error, invalid API key! Check log file for details.\n")
-                            else:
-                                print(
-                                    "\n---!! GenderizeException - You probably exceeded the request limit, please add or purchase a API key. Check log file for details.\n")
-                            stopped = True
-                            break
-
-                        response_time.append(time.time() - start)
-                        print("Processed chunk " + str(index + 1) + " of " + str(chunks_len) + " -- Time remaining (est.): " +
-                              str(round((sum(response_time) / len(response_time) * (chunks_len - index - 1)), 3)) + "s")
-
-                singleDataDict1 = dict()
-                newSingleDataDict = dict()
-                singleDataDictGen = dict()
-                singleDataDictData = dict()
-                newDataListWithGen = list()
-                allDataList = list()
-                addDataDict = {}
-                newDataList = list()
-                newArry = list()
-                for l in allData:
-
-                    for n in range(0, len(l)):
-                        singleDataDict1[n] = l[n]
-
-                    dictionary_copy = singleDataDict1.copy()
-                    allDataList.append(dictionary_copy)
-
-                for m in allDataList:
-                    for n in dataset:
-
-                        if n['name'] == m[0]:  # specify name column index
-                            singleDataDictGen = n
-
-                            singleDataDictData = m
-
-                            singleDataDictData.update(singleDataDictGen)
-
-                            del singleDataDictData['name']
-
-                            newDataListWithGen.append(singleDataDictData)
-
-                for data in newDataListWithGen:
-                    if not data in newArry:
-                        newArry.append(data)
-                for newData in newArry:
-
-                    if newData['gender'] == 'female' and newData['probability'] > 0.5:
-                        newData.update({'male': 0, 'female': 1})
-                    elif newData['gender'] == 'male'and newData['probability'] > 0.5:
-                        newData.update({'male': 1, 'female': 0})
-                    del newData['gender']
-                    del newData['probability']
-                    del newData['count']
-                    writer1.writerow(newData.values())
-
-        if args.auto == True:
-            response_time = []
-            gender_responses = list()
-            print("\nCompleting identical first_name...\n")
-            # AUTOCOMPLETE first_name
-
-            # Create master dict
-            gender_dict = {}
+        response_time = []
+        gender_responses = list()
+        with open(ofile, 'w', newline='', encoding="utf8") as f:
+            writer = csv.writer(f)
+            writer.writerow(i)  # write row header based off input file header
             chunks_len = len(chunks)
             stopped = False
             for index, chunk in enumerate(chunks):
@@ -226,18 +130,16 @@ def genderize(args):
 
                         if key_present:
                             dataset = genderize.get(chunk)
-
                         else:
                             dataset = Genderize().get(chunk)
 
                         gender_responses.append(dataset)
-
                         success = True
                     except GenderizeException as e:
-                        # print("\n" + str(e))
+                        #print("\n" + str(e))
                         logger.error(e)
 
-                        # Error handling
+                        # zzError handling
                         if "response not in JSON format" in str(e) and args.catch == True:
                             if jpyh.query_yes_no("\n---!! 502 detected, try again?") == True:
                                 success = False
@@ -255,13 +157,61 @@ def genderize(args):
                     print("Processed chunk " + str(index + 1) + " of " + str(chunks_len) + " -- Time remaining (est.): " +
                           str(round((sum(response_time) / len(response_time) * (chunks_len - index - 1)), 3)) + "s")
 
-            filename, file_extension = os.path.splitext(ofile)
-            with open(filename, 'w', newline='', encoding="utf8") as f:
-                writer2 = csv.writer(f)
+                    singleDataDict1 = dict()
+                    newSingleDataDict = dict()
+                    singleDataDictGen = dict()
+                    singleDataDictData = dict()
+                    newDataListWithGen = list()
+                    allDataList = list()
+                    addDataDict = {}
+                    newDataList = list()
+                    newArry = list()
 
-                writer2.writerow(
-                    i)
+                    # get each row and make a new dictionatry
+                    for l in allData:
+                        for n in range(0, len(l)):
+                            singleDataDict1[n] = l[n]
+
+                        dictionary_copy = singleDataDict1.copy()
+                        allDataList.append(dictionary_copy)
+
+                    # Combined the input file data with the gender api data
+                    for m in allDataList:
+                        for n in dataset:
+
+                            if n['name'] == m[1]:  # specify name column here
+                                singleDataDictGen = n
+                                singleDataDictData = m
+                                singleDataDictData.update(singleDataDictGen)
+
+                                # delete the name key because of duplication
+                                del singleDataDictData['name']
+
+                                newDataListWithGen.append(
+                                    singleDataDictData)
+
+                    for newData in newDataListWithGen:
+                        # add gender binary at the end of the data dictionary
+                        if newData['gender'] == 'female' and newData['probability'] > 0.5:
+                            newData.update({'male': 0, 'female': 1})
+                        elif newData['gender'] == 'male'and newData['probability'] > 0.5:
+                            newData.update({'male': 1, 'female': 0})
+                        # since this is without argument auto delete gender, probability, and count
+                        del newData['gender']
+                        del newData['probability']
+                        del newData['count']
+                        # write the data column
+                        writer.writerow(newData.values())
+                    break
+
+            if args.auto == True:
+                print("\nCompleting identical first_name...\n")
+                # AUTOCOMPLETE first_name
+
+                # Create master dict
+                gender_dict = dict()
                 singleDataDict = dict()
+                singleDataDict1 = dict()
                 newSingleDataDict = dict()
                 singleDataDictGen = dict()
                 singleDataDictData = dict()
@@ -269,32 +219,41 @@ def genderize(args):
                 allDataList = list()
                 addDataDict = {}
                 newDataList = list()
+                newArry = list()
+
+                # get each row and make a new dictionatry
                 for l in allData:
-
                     for n in range(0, len(l)):
-                        singleDataDict[n] = l[n]
 
-                    dictionary_copy = singleDataDict.copy()
+                        singleDataDict1[n] = l[n]
+
+                    dictionary_copy = singleDataDict1.copy()
                     allDataList.append(dictionary_copy)
 
-                for m in range(0, len(allDataList)):
+                # Combined the input file data rows with the gender api data rows
+                for m in allDataList:
                     for n in dataset:
 
-                        if n['name'] == allDataList[m][0]:  # enter the column index of name
+                        if n['name'] == m[1]:  # specify name column here
                             singleDataDictGen = n
-                            singleDataDictData = allDataList[m]
+                            singleDataDictData = m
                             singleDataDictData.update(singleDataDictGen)
+
                             del singleDataDictData['name']
+
                             newDataListWithGen.append(singleDataDictData)
 
-                for data in newDataListWithGen:
+                filename, file_extension = os.path.splitext(ofile)
+                with open(filename, 'w', newline='', encoding="utf8") as f:
+                    writer = csv.writer(f)
 
-                    if data['gender'] == None and data['probability'] == 0 and data['count'] == 0:
-                        continue
-                    writer2.writerow(
-                        data.values())
+                    writer.writerow(i)  # write the header column
 
-    print("Done!\n")
+                    for newData in newDataListWithGen:
+                        # write the data column
+                        writer.writerow(newData.values())
+
+            print("Done!\n")
 
 
 if __name__ == "__main__":
